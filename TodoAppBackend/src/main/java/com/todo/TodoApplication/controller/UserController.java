@@ -1,29 +1,28 @@
 package com.todo.TodoApplication.controller;
 
+import com.todo.TodoApplication.exceptions.UserNotFoundException;
 import com.todo.TodoApplication.models.ApplicationUser;
 import com.todo.TodoApplication.repository.UserRepository;
+import com.todo.TodoApplication.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
 public class UserController {
     private final UserRepository userRepository;
-
+    private final UserService userService;
 
     // Create
     @PostMapping("/users/register")
-    public ApplicationUser registerUser(@RequestBody ApplicationUser applicationUser) {
-
-            userRepository.save(applicationUser);
-
-            return applicationUser;
-
-
+    public ResponseEntity<String> registerUser(@RequestBody ApplicationUser applicationUser) {
+            return userService.registerUser(applicationUser);
     }
+
 
     // read
     @GetMapping("/users/search")
@@ -31,48 +30,39 @@ public class UserController {
             @RequestParam(required = false) Long id,
             @RequestParam(required = false) String username
     ) {
-        // Check if both id and username are provided
-        if (id != null && username != null) {
-            // Find by username and id
-            return userRepository.findByUsernameAndId(username, id)
-                    .map(Collections::singletonList) // Wrap the single result in a list
-                    .orElse(Collections.emptyList()); // Return an empty list if not found
-        } else if (username != null) {
-            return userRepository.findByUsername(username)
-                    .map(Collections::singletonList)
-                    .orElse(Collections.emptyList());
-        } else if (id != null) {
-            return userRepository.findById(id)
-                    .map(Collections::singletonList)
-                    .orElse(Collections.emptyList());
-        }
-        else {
-            // Return all users if no specific query parameters are provided
-            return userRepository.findAll();
-        }
+       return userService.getAllUsers(id, username);
     }
 
     // update
     @PutMapping("/users/update")
-    public ApplicationUser updateUserDetails(
+    public ResponseEntity<String> updateUserDetails(
         @RequestParam(required = true) Long userId,
         @RequestBody ApplicationUser newUser){
+        try {
+            ApplicationUser updatedUser = userService.updateUser(userId, newUser);
+            return ResponseEntity.ok("User details updated successfully");
+        } catch (UserNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An error occurred while updating user details: " + e.getMessage());
+        }
 
-        ApplicationUser user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        user.setUsername(newUser.getUsername());
-        user.setEmail(newUser.getEmail());
-        user.setPassword(newUser.getPassword());
-        return userRepository.save(user);
     }
 
     // delete
 
     @DeleteMapping("/users/delete")
-    public void deleteUser(@RequestParam
-                           Long id){
-        userRepository.deleteById(id);
+    public ResponseEntity<String> deleteUser(@RequestParam Long id){
+        boolean isDeleted = userService.deleteUser(id);
+        if(isDeleted){
+            return ResponseEntity.ok("User Has Been Deleted Successfully");
+        }else{
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("User with ID " + id + " not found");
+        }
     }
 
 }
+

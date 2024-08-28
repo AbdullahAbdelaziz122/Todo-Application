@@ -4,12 +4,16 @@ import com.todo.TodoApplication.models.ApplicationUser;
 import com.todo.TodoApplication.models.Task;
 import com.todo.TodoApplication.repository.TaskRepository;
 import com.todo.TodoApplication.repository.UserRepository;
+import com.todo.TodoApplication.service.TaskService;
 import jakarta.persistence.PostUpdate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 @RequiredArgsConstructor
@@ -17,19 +21,25 @@ public class TaskController {
 
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
+    private final TaskService taskService;
 
     // create
     @PostMapping("/tasks/add/{user-id}")
-    public Task addTask(@RequestBody Task task, @PathVariable("user-id") Long userId) {
-        // Fetch the user from the database
-        ApplicationUser user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public ResponseEntity<String> addTask(@RequestBody Task task, @PathVariable("user-id") Long userId) {
+       boolean isAdded = taskService.addTask(task, userId);
+       try {
+           if(isAdded) {
 
-        // Associate the user with the task
-        task.setUser(user);
+               return ResponseEntity.status(HttpStatus.CREATED).body("Task Has Been Successfully Created");
+               } else {
+               return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                       .body("User ID: " + userId + " Is Not Found");
+               }
 
-        // Save the task and return it
-        return taskRepository.save(task);
+       }catch (Exception ex){
+           return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                   .body("An error occurred while updating user details: " + ex.getMessage());
+       }
     }
 
 
@@ -51,40 +61,39 @@ public class TaskController {
             @PathVariable("user-id") Long userId,
             @RequestParam(required = false) String title,
             @RequestParam(required = false) String status) {
-
-
-            if (title != null && status != null) {
-                return taskRepository.findByUser_IdAndTitleContainingAndStatus(userId, title, status);
-            } else if (title != null) {
-                return taskRepository.findByUser_IdAndTitleContaining(userId, title);
-            } else if (status != null) {
-                return taskRepository.findByUser_IdAndStatus(userId, status);
-            } else {
-                return taskRepository.findByUser_Id(userId);
-            }
-
+        return taskService.getTasks(userId, title, status);
     }
 
 
     //delete
     @DeleteMapping("/tasks/delete")
-    public void deleteTaskById(@RequestParam Long id) {
-        taskRepository.deleteById(id);
+    public ResponseEntity<String> deleteTaskById(@RequestParam Long id) {
+        boolean isDeleted = taskService.deleteTaskById(id);
+        if(isDeleted){
+            return ResponseEntity.ok("Task Has Been Deleted Successfully");
+        }else{
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Task with ID " + id + " not found");
+        }
     }
 
     // update
     @PutMapping("/tasks/update")
-    public Task updateTaskById(@RequestBody Task newTask, @RequestParam Long id) {
-        Task task = taskRepository.findById(id).orElseThrow(() -> new RuntimeException("Task not found"));
+    public ResponseEntity<String> updateTaskById(@RequestBody Task newTask, @RequestParam Long id) {
 
-        // Update the fields
-        task.setTitle(newTask.getTitle());
-        task.setDescription(newTask.getDescription());
-        task.setStatus(newTask.getStatus());
-
-        // Save the updated task
-        return taskRepository.save(task);
+        try{
+            boolean isUpdated = taskService.updateTaskById(newTask, id);
+            if(isUpdated){
+                return ResponseEntity.status(HttpStatus.CREATED)
+                        .body("Task Has Been Updated Successfully");
+            }else{
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("There Is No Task With ID: "+ id);
+            }
+        }catch (Exception ex){
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An Error Occurred Updating Task Details: "+ ex.getMessage());
+        }
     }
-
 
 }
