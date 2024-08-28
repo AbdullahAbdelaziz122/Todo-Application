@@ -6,12 +6,7 @@ import com.todo.TodoApplication.repository.TaskRepository;
 import com.todo.TodoApplication.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -19,14 +14,6 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
-
-//    public Task addTask(Task task, Long userId) {
-//
-//        ApplicationUser user = userRepository.findById(userId)
-//                .orElseThrow(() -> new RuntimeException("User not found"));
-//        task.setUser(user);
-//        return taskRepository.save(task);
-//    }
 
         public boolean addTask(Task task, Long userId) {
         if(userRepository.existsById(userId)){
@@ -68,15 +55,6 @@ public class TaskService {
     }
 
     public boolean updateTaskById(Task newTask, Long id) {
-//        Task task = taskRepository.findById(id).orElseThrow(() -> new RuntimeException("Task not found"));
-//
-//        // Update the fields
-//        task.setTitle(newTask.getTitle());
-//        task.setDescription(newTask.getDescription());
-//        task.setStatus(newTask.getStatus());
-//
-//        // Save the updated task
-//        return taskRepository.save(task);
 
         if(taskRepository.existsById(id)){
             Task task = taskRepository.findById(id).orElseThrow(() -> new RuntimeException("Task not found"));
